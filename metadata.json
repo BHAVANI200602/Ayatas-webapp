@@ -1,0 +1,6 @@
+{
+  "name": "Professional Signup Flow",
+  "description": "Multi-step professional onboarding and signup flow with Firebase authentication and Supabase database integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
