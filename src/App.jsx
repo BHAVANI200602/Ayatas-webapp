@@ -293,7 +293,7 @@ export default function App() {
         setCurrentUser(resData.data);
         setStep("profile");
       } else {
-        setStep("biz_name");
+        setStep("personal_details");
       }
     } catch (err) {
       console.error(err);
@@ -311,6 +311,11 @@ export default function App() {
         const result = await signInWithPopup(authInstance, provider);
         if (result.user) {
           setEmail(result.user.email || "");
+          if (result.user.displayName) {
+             const parts = result.user.displayName.split(" ");
+             setFirstName(parts[0] || "");
+             setLastName(parts.slice(1).join(" ") || "");
+          }
           await fetchProfile(result.user.email);
         }
       } catch (err) {
@@ -780,6 +785,78 @@ export default function App() {
               alt="Professional setting"
               className="absolute inset-0 w-full h-full object-cover object-center scale-102 filter brightness-95"
             />
+          </div>
+        </div>
+      )}
+
+      {step === "personal_details" && (
+        <div className="min-h-screen flex flex-col bg-white">
+          <OnboardingHeader
+            currentStep={1}
+            onRightAction={() => {
+              if (firstName && lastName && mobileNumber) setStep("biz_name");
+            }}
+            rightActionDisabled={!firstName || !lastName || !mobileNumber}
+            rightActionIcon={<ArrowRight size={14} />}
+          />
+
+          <div className="flex-1 max-w-[540px] w-full mx-auto px-6 py-16 flex flex-col justify-center space-y-8">
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Account setup</span>
+              <h2 className="text-[32px] md:text-[38px] font-bold text-neutral-900 tracking-tight leading-tight">
+                Your personal details
+              </h2>
+              <p className="text-neutral-500 text-sm leading-relaxed">
+                Please confirm your name and mobile number.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-neutral-800">First name</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full px-4 py-3.5 border border-neutral-200 rounded-xl outline-none focus:border-neutral-950 transition-all text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-neutral-800">Last name</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="w-full px-4 py-3.5 border border-neutral-200 rounded-xl outline-none focus:border-neutral-950 transition-all text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-neutral-800">Mobile number</label>
+                <div className="flex gap-2.5">
+                  <div className="relative shrink-0">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="appearance-none bg-white pl-4 pr-8 py-3.5 border border-neutral-200 rounded-xl outline-none text-sm font-semibold cursor-pointer"
+                    >
+                      <option value="+91">+91</option>
+                      <option value="+1">+1</option>
+                      <option value="+44">+44</option>
+                      <option value="+971">+971</option>
+                      <option value="+61">+61</option>
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">▼</div>
+                  </div>
+                  <input
+                    type="tel"
+                    value={mobileNumber}
+                    onChange={(e) => setMobileNumber(e.target.value)}
+                    placeholder="Enter your mobile number"
+                    className="w-full px-4 py-3.5 border border-neutral-200 rounded-xl outline-none focus:border-neutral-900 transition-all text-sm"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
