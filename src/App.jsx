@@ -37,22 +37,19 @@ function MapEvents({ setPosition, setAddress }) {
       const center = map.getCenter();
       setPosition([center.lat, center.lng]);
       
-      // Debounce to respect API rate limits
+      // Debounce to respect Nominatim API rate limits (1 req/sec)
       if (window.geocodingTimeout) clearTimeout(window.geocodingTimeout);
       window.geocodingTimeout = setTimeout(async () => {
         try {
-          const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${center.lat}&longitude=${center.lng}&localityLanguage=en`);
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${center.lat}&lon=${center.lng}&accept-language=en&email=support@ayatas.com`);
           const data = await res.json();
-          if (data) {
-            const addressParts = [data.locality, data.city, data.principalSubdivision, data.countryName].filter(Boolean);
-            if (addressParts.length > 0) {
-              setAddress(addressParts.join(", "));
-            }
+          if (data && data.display_name) {
+            setAddress(data.display_name);
           }
         } catch (err) {
           console.error("Geocoding failed", err);
         }
-      }, 1000);
+      }, 1500);
     }
   });
   return null;
@@ -400,13 +397,10 @@ export default function App() {
           const { latitude, longitude } = position.coords;
           setMapPosition([latitude, longitude]);
           try {
-            const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=en&email=support@ayatas.com`);
             const data = await res.json();
-            if (data) {
-              const addressParts = [data.locality, data.city, data.principalSubdivision, data.countryName].filter(Boolean);
-              if (addressParts.length > 0) {
-                setAddress(addressParts.join(", "));
-              }
+            if (data && data.display_name) {
+              setAddress(data.display_name);
             }
           } catch (err) {
             console.error("Geocoding failed", err);
