@@ -28,6 +28,35 @@ import {
 } from "lucide-react";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
+import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+
+function MapEvents({ setPosition, setAddress }) {
+  const map = useMapEvents({
+    moveend: async () => {
+      const center = map.getCenter();
+      setPosition([center.lat, center.lng]);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${center.lat}&lon=${center.lng}`);
+        const data = await res.json();
+        if (data && data.display_name) {
+          setAddress(data.display_name);
+        }
+      } catch (err) {
+        console.error("Geocoding failed", err);
+      }
+    }
+  });
+  return null;
+}
+
+function MapController({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, 15);
+  }, [center, map]);
+  return null;
+}
 
 function OnboardingHeader({
   currentStep,
@@ -133,10 +162,8 @@ export default function App() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [authError, setAuthError] = useState("");
   const [isEditingAddress, setIsEditingAddress] = useState(false);
-  const [mapZoom, setMapZoom] = useState(15);
-  const [mapOffset, setMapOffset] = useState({ x: 0, y: 0 });
-  const [isDraggingMap, setIsDraggingMap] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [mapPosition, setMapPosition] = useState([17.7214, 83.3364]);
+  const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
     fetch("/api/config")
@@ -354,21 +381,32 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  const handleMouseDown = (e) => {
-    setIsDraggingMap(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDraggingMap) return;
-    const dx = e.clientX - dragStart.x;
-    const dy = e.clientY - dragStart.y;
-    setMapOffset({ x: mapOffset.x + dx, y: mapOffset.y + dy });
-    setDragStart({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleMouseUp = () => {
-    setIsDraggingMap(false);
+  const handleGPSLocation = () => {
+    if ("geolocation" in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          setMapPosition([latitude, longitude]);
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            const data = await res.json();
+            if (data && data.display_name) {
+              setAddress(data.display_name);
+            }
+          } catch (err) {
+            console.error("Geocoding failed", err);
+          }
+          setIsLocating(false);
+        },
+        (error) => {
+          console.error("GPS error", error);
+          setIsLocating(false);
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser");
+    }
   };
 
   const categoriesList = [
@@ -1056,58 +1094,46 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="border border-neutral-200 rounded-2xl overflow-hidden relative shadow-inner select-none h-60 bg-sky-50">
-                <div 
-                  className="absolute inset-0 cursor-grab active:cursor-grabbing"
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
-                >
-                  <svg 
-                    width="100%" 
-                    height="100%" 
-                    className="absolute"
-                    style={{
-                      transform: `translate(${mapOffset.x}px, ${mapOffset.y}px) scale(${mapZoom / 15})`,
-                      transformOrigin: "center center"
-                    }}
-                  >
-                    <rect width="1000" height="1000" x="-100" y="-100" fill="#E8ECE9" />
-                    <path d="M-100,50 Q100,200 400,20 M100,20 L300,500 M400,50 L50,450" stroke="#CCD1CD" strokeWidth="20" fill="none" />
-                    <path d="M-50,220 C200,100 350,300 600,150" stroke="#7CB342" strokeWidth="12" fill="none" opacity="0.3" />
-                    <path d="M120,-20 L150,600" stroke="#CCD1CD" strokeWidth="25" fill="none" />
-                    <path d="M-100,150 L800,450" stroke="#E28743" strokeWidth="10" fill="none" opacity="0.4" />
-                    <ellipse cx="250" cy="120" rx="30" ry="12" fill="#81C784" opacity="0.4" />
-                    <ellipse cx="140" cy="280" rx="45" ry="15" fill="#81C784" opacity="0.3" />
-                  </svg>
-                  <div className="absolute left-[50%] top-[50%] -translate-x-1/2 -translate-y-[85%] text-neutral-900 pointer-events-none">
-                    <div className="relative flex flex-col items-center">
-                      <div className="bg-neutral-900 text-white rounded-lg p-2.5 shadow-lg flex items-center gap-1 text-[11px] font-bold tracking-tight whitespace-nowrap mb-1">
-                        <svg className="w-4 h-4 text-violet-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                        </svg>
-                        Venue Location
-                      </div>
-                      <div className="w-7 h-7 bg-rose-500 rounded-full flex items-center justify-center border-4 border-white shadow-xl">
-                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                      </div>
+              <div className="border border-neutral-200 rounded-2xl overflow-hidden relative shadow-inner select-none h-60 bg-sky-50 z-0">
+                <MapContainer center={mapPosition} zoom={15} scrollWheelZoom={true} style={{ height: '100%', width: '100%', zIndex: 0 }}>
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  />
+                  <MapEvents setPosition={setMapPosition} setAddress={setAddress} />
+                  <MapController center={mapPosition} />
+                </MapContainer>
+
+                <div className="absolute left-[50%] top-[50%] -translate-x-1/2 -translate-y-[85%] text-neutral-900 pointer-events-none z-10">
+                  <div className="relative flex flex-col items-center">
+                    <div className="bg-neutral-900 text-white rounded-lg p-2.5 shadow-lg flex items-center gap-1 text-[11px] font-bold tracking-tight whitespace-nowrap mb-1">
+                      <svg className="w-4 h-4 text-violet-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                      </svg>
+                      Venue Location
+                    </div>
+                    <div className="w-7 h-7 bg-rose-500 rounded-full flex items-center justify-center border-4 border-white shadow-xl">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
                     </div>
                   </div>
                 </div>
 
-                <div className="absolute right-4 top-4 flex flex-col gap-1 shadow-md">
+                <div className="absolute right-4 bottom-4 flex flex-col gap-1 shadow-md z-10">
                   <button 
-                    onClick={() => setMapZoom(Math.min(mapZoom + 1, 20))}
-                    className="w-10 h-10 bg-white border border-neutral-200 flex items-center justify-center font-bold text-neutral-700 hover:bg-neutral-50 rounded-t-lg text-lg cursor-pointer"
+                    type="button"
+                    onClick={handleGPSLocation}
+                    disabled={isLocating}
+                    className="h-10 px-4 bg-white border border-neutral-200 flex items-center justify-center gap-2 font-bold text-neutral-700 hover:bg-neutral-50 rounded-lg text-xs cursor-pointer shadow-sm"
                   >
-                    +
-                  </button>
-                  <button 
-                    onClick={() => setMapZoom(Math.max(mapZoom - 1, 10))}
-                    className="w-10 h-10 bg-white border-x border-b border-neutral-200 flex items-center justify-center font-bold text-neutral-700 hover:bg-neutral-50 rounded-b-lg text-lg cursor-pointer"
-                  >
-                    -
+                    {isLocating ? (
+                       <div className="w-3.5 h-3.5 border-2 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                       <svg className="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                       </svg>
+                    )}
+                    Use GPS
                   </button>
                 </div>
               </div>
