@@ -33,18 +33,25 @@ import "leaflet/dist/leaflet.css";
 
 function MapEvents({ setPosition, setAddress }) {
   const map = useMapEvents({
-    moveend: async () => {
+    moveend: () => {
       const center = map.getCenter();
       setPosition([center.lat, center.lng]);
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${center.lat}&lon=${center.lng}`);
-        const data = await res.json();
-        if (data && data.display_name) {
-          setAddress(data.display_name);
+      
+      // Debounce to respect Nominatim API rate limits (1 req/sec)
+      if (window.geocodingTimeout) clearTimeout(window.geocodingTimeout);
+      window.geocodingTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${center.lat}&lon=${center.lng}`, {
+            headers: { "Accept-Language": "en-US,en;q=0.9" }
+          });
+          const data = await res.json();
+          if (data && data.display_name) {
+            setAddress(data.display_name);
+          }
+        } catch (err) {
+          console.error("Geocoding failed", err);
         }
-      } catch (err) {
-        console.error("Geocoding failed", err);
-      }
+      }, 1000);
     }
   });
   return null;
@@ -53,7 +60,10 @@ function MapEvents({ setPosition, setAddress }) {
 function MapController({ center }) {
   const map = useMap();
   useEffect(() => {
-    map.flyTo(center, 15);
+    const current = map.getCenter();
+    if (current.distanceTo(center) > 10) {
+      map.flyTo(center, 15);
+    }
   }, [center, map]);
   return null;
 }
