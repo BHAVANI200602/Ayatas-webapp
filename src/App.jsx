@@ -41,9 +41,7 @@ function MapEvents({ setPosition, setAddress }) {
       if (window.geocodingTimeout) clearTimeout(window.geocodingTimeout);
       window.geocodingTimeout = setTimeout(async () => {
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${center.lat}&lon=${center.lng}`, {
-            headers: { "Accept-Language": "en-US,en;q=0.9" }
-          });
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${center.lat}&lon=${center.lng}&accept-language=en`);
           const data = await res.json();
           if (data && data.display_name) {
             setAddress(data.display_name);
@@ -399,7 +397,7 @@ export default function App() {
           const { latitude, longitude } = position.coords;
           setMapPosition([latitude, longitude]);
           try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=en`);
             const data = await res.json();
             if (data && data.display_name) {
               setAddress(data.display_name);
