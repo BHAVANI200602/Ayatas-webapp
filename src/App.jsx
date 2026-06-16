@@ -41,6 +41,18 @@ function OnboardingHeader({
 }) {
   return (
     <div className="border-b border-neutral-100 bg-white">
+      {/* Progress Bar at the very top */}
+      <div className="flex gap-1.5 w-full pt-1.5 px-4 sm:px-8 mx-auto max-w-[1200px]">
+        {[1, 2, 3, 4, 5].map((s) => (
+          <div
+            key={s}
+            className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+              s <= currentStep ? "bg-violet-600" : "bg-neutral-150"
+            }`}
+          ></div>
+        ))}
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-4">
         {/* Left Slot: Back Button */}
         <div className="w-12 flex items-center justify-start shrink-0">
@@ -55,19 +67,8 @@ function OnboardingHeader({
           )}
         </div>
 
-        {/* Center Slot: Dynamic Stretched Progress Bar */}
-        <div className="flex-1 px-4">
-          <div className="flex gap-1.5 w-full">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <div
-                key={s}
-                className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                  s <= currentStep ? "bg-violet-600" : "bg-neutral-150"
-                }`}
-              ></div>
-            ))}
-          </div>
-        </div>
+        {/* Empty Center Slot to push Right Slot to the edge */}
+        <div className="flex-1"></div>
 
         {/* Right Slot: Close/Continue Button */}
         <div className="flex items-center justify-end gap-2 shrink-0 min-w-[70px] sm:min-w-[120px]">
